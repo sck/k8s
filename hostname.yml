@@ -1,0 +1,22 @@
+- hosts: all
+  become: yes
+  tasks:
+    - shell: ifconfig ens3 | grep "inet " | perl -ne '/([\d.]+)/; print $1'
+      register: ip 
+    - name: add myself to /etc/hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '^127\.0\.1\.1[ \t]'
+        line: "127.0.1.1 h{{ ip.stdout_lines[0]  }}"
+        state: present
+    - name: add myself to /etc/hostname
+      lineinfile:
+        dest: /etc/hostname
+        regexp: '^'
+        line: "h{{ ip.stdout_lines[0]  }}"
+        state: present
+    - name: setting new hostname in hostnamectl
+      shell: hostnamectl set-hostname h{{ ip.stdout_lines[0]  }}
+      args:
+        chdir: $HOME
+        creates: cluster_initialized.txt
